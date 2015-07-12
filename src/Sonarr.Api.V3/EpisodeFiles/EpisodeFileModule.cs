@@ -24,21 +24,21 @@ namespace Sonarr.Api.V3.EpisodeFiles
         private readonly IMediaFileService _mediaFileService;
         private readonly IRecycleBinProvider _recycleBinProvider;
         private readonly ISeriesService _seriesService;
-        private readonly IQualityUpgradableSpecification _qualityUpgradableSpecification;
+        private readonly IUpgradableSpecification _upgradableSpecification;
         private readonly Logger _logger;
 
         public EpisodeModule(IBroadcastSignalRMessage signalRBroadcaster,
                              IMediaFileService mediaFileService,
                              IRecycleBinProvider recycleBinProvider,
                              ISeriesService seriesService,
-                             IQualityUpgradableSpecification qualityUpgradableSpecification,
+                             IUpgradableSpecification upgradableSpecification,
                              Logger logger)
             : base(signalRBroadcaster)
         {
             _mediaFileService = mediaFileService;
             _recycleBinProvider = recycleBinProvider;
             _seriesService = seriesService;
-            _qualityUpgradableSpecification = qualityUpgradableSpecification;
+            _upgradableSpecification = upgradableSpecification;
             _logger = logger;
 
             GetResourceById = GetEpisodeFile;
@@ -55,7 +55,7 @@ namespace Sonarr.Api.V3.EpisodeFiles
             var episodeFile = _mediaFileService.Get(id);
             var series = _seriesService.GetSeries(episodeFile.SeriesId);
 
-            return episodeFile.ToResource(series, _qualityUpgradableSpecification);
+            return episodeFile.ToResource(series, _upgradableSpecification);
         }
 
         private List<EpisodeFileResource> GetEpisodeFiles()
@@ -73,7 +73,7 @@ namespace Sonarr.Api.V3.EpisodeFiles
                 int seriesId = Convert.ToInt32(seriesIdQuery.Value);
                 var series = _seriesService.GetSeries(seriesId);
 
-                return _mediaFileService.GetFilesBySeries(seriesId).ConvertAll(f => f.ToResource(series, _qualityUpgradableSpecification));
+                return _mediaFileService.GetFilesBySeries(seriesId).ConvertAll(f => f.ToResource(series, _upgradableSpecification));
             }
 
             else
@@ -88,7 +88,7 @@ namespace Sonarr.Api.V3.EpisodeFiles
 
                 return episodeFiles.GroupBy(e => e.SeriesId)
                                    .SelectMany(f => f.ToList()
-                                                     .ConvertAll( e => e.ToResource(_seriesService.GetSeries(f.Key), _qualityUpgradableSpecification)))
+                                                     .ConvertAll( e => e.ToResource(_seriesService.GetSeries(f.Key), _upgradableSpecification)))
                                    .ToList();
             }
         }
@@ -107,14 +107,22 @@ namespace Sonarr.Api.V3.EpisodeFiles
 
             foreach (var episodeFile in episodeFiles)
             {
-                episodeFile.Quality = resource.Quality;
+                if (resource.Language != null)
+                {
+                    episodeFile.Language = resource.Language;
+                }
+
+                if (resource.Quality != null)
+                {
+                    episodeFile.Quality = resource.Quality;
+                }
             }
 
             _mediaFileService.Update(episodeFiles);
 
             var series = _seriesService.GetSeries(episodeFiles.First().SeriesId);
 
-            return episodeFiles.ConvertAll(f => f.ToResource(series, _qualityUpgradableSpecification))
+            return episodeFiles.ConvertAll(f => f.ToResource(series, _upgradableSpecification))
                                .AsResponse(HttpStatusCode.Accepted);
         }
 
