@@ -1,9 +1,11 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Cache;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.History;
+using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Parser;
 
 namespace NzbDrone.Core.Download.TrackedDownloads
@@ -11,23 +13,30 @@ namespace NzbDrone.Core.Download.TrackedDownloads
     public interface ITrackedDownloadService
     {
         TrackedDownload Find(string downloadId);
+        void StopTracking(string downloadId);
+        void StopTracking(List<string> downloadIds);
         TrackedDownload TrackDownload(DownloadClientDefinition downloadClient, DownloadClientItem downloadItem);
+        List<TrackedDownload> GetTrackedDownloads();
+        void UpdateTrackable(List<TrackedDownload> trackedDownloads);
     }
 
     public class TrackedDownloadService : ITrackedDownloadService
     {
         private readonly IParsingService _parsingService;
         private readonly IHistoryService _historyService;
+        private readonly IEventAggregator _eventAggregator;
         private readonly Logger _logger;
         private readonly ICached<TrackedDownload> _cache;
 
         public TrackedDownloadService(IParsingService parsingService,
-            ICacheManager cacheManager,
-            IHistoryService historyService,
-            Logger logger)
+                                      ICacheManager cacheManager,
+                                      IHistoryService historyService,
+                                      IEventAggregator eventAggregator,
+                                      Logger logger)
         {
             _parsingService = parsingService;
             _historyService = historyService;
+            _eventAggregator = eventAggregator;
             _cache = cacheManager.GetCache<TrackedDownload>(GetType());
             _logger = logger;
         }
@@ -37,6 +46,28 @@ namespace NzbDrone.Core.Download.TrackedDownloads
             return _cache.Find(downloadId);
         }
 
+        public void StopTracking(string downloadId)
+        {
+            var trackedDownload = _cache.Find(downloadId);
+
+            _cache.Remove(downloadId);
+            _eventAggregator.PublishEvent(new TrackedDownloadsRemovedEvent(new List<TrackedDownload> { trackedDownload }));
+        }
+
+        public void StopTracking(List<string> downloadIds)
+        {
+            var trackedDownloads = new List<TrackedDownload>();
+
+            foreach (var downloadId in downloadIds)
+            {
+                var trackedDownload = _cache.Find(downloadId);
+                _cache.Remove(downloadId);
+                trackedDownloads.Add(trackedDownload);
+            }
+
+            _eventAggregator.PublishEvent(new TrackedDownloadsRemovedEvent(trackedDownloads));
+        }
+
         public TrackedDownload TrackDownload(DownloadClientDefinition downloadClient, DownloadClientItem downloadItem)
         {
             var existingItem = Find(downloadItem.DownloadId);
@@ -44,6 +75,8 @@ namespace NzbDrone.Core.Download.TrackedDownloads
             if (existingItem != null && existingItem.State != TrackedDownloadStage.Downloading)
             {
                 existingItem.DownloadItem = downloadItem;
+                existingItem.IsTrackable = true;
+
                 return existingItem;
             }
 
@@ -51,7 +84,8 @@ namespace NzbDrone.Core.Download.TrackedDownloads
             {
                 DownloadClient = downloadClient.Id,
                 DownloadItem = downloadItem,
-                Protocol = downloadClient.Protocol
+                Protocol = downloadClient.Protocol,
+                IsTrackable = true
             };
 
             try
@@ -68,6 +102,9 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                 {
                     var firstHistoryItem = historyItems.OrderByDescending(h => h.Date).First();
                     trackedDownload.State = GetStateFromHistory(firstHistoryItem.EventType);
+
+                    var grabbedEvent = historyItems.FirstOrDefault(v => v.EventType == HistoryEventType.Grabbed);
+                    trackedDownload.Indexer = grabbedEvent?.Data["indexer"];
 
                     if (parsedEpisodeInfo == null ||
                         trackedDownload.RemoteEpisode == null ||
@@ -98,6 +135,21 @@ namespace NzbDrone.Core.Download.TrackedDownloads
 
             _cache.Set(trackedDownload.DownloadItem.DownloadId, trackedDownload);
             return trackedDownload;
+        }
+
+        public List<TrackedDownload> GetTrackedDownloads()
+        {
+            return _cache.Values.ToList();
+        }
+
+        public void UpdateTrackable(List<TrackedDownload> trackedDownloads)
+        {
+            var untrackable = GetTrackedDownloads().ExceptBy(t => t.DownloadItem.DownloadId, trackedDownloads, t => t.DownloadItem.DownloadId, StringComparer.CurrentCulture).ToList();
+
+            foreach (var trackedDownload in untrackable)
+            {
+                trackedDownload.IsTrackable = false;
+            }
         }
 
         private static TrackedDownloadStage GetStateFromHistory(HistoryEventType eventType)
