@@ -1,0 +1,12 @@
+.menuButton {
+  composes: menuButton from './MenuButton.css';
+
+  width: $toolbarButtonWidth;
+  height: $toolbarHeight;
+  text-align: center;
+}
+
+.label {
+  height: 14px;
+  font-size: $extraSmallFontSize;
+}
