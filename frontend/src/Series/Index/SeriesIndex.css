@@ -1,0 +1,30 @@
+.pageContentBodyWrapper {
+  display: flex;
+  flex: 1 0 1px;
+  overflow: hidden;
+}
+
+.contentBody {
+  composes: contentBody from 'Components/Page/PageContentBody.css';
+}
+
+.postersInnerContentBody {
+  composes: innerContentBody from 'Components/Page/PageContentBody.css';
+
+  /* 5px less padding than normal to handle poster's 5px margin */
+  padding: 15px;
+}
+
+.tableInnerContentBody {
+  composes: innerContentBody from 'Components/Page/PageContentBody.css';
+}
+
+@media only screen and (max-width: $breakpointSmall) {
+  .pageContentBodyWrapper {
+    flex-basis: auto;
+  }
+
+  .contentBody {
+    flex-basis: 1px;
+  }
+}

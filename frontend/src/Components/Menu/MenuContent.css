@@ -1,0 +1,23 @@
+.menuContent {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background-color: $toolbarMenuItemBackgroundColor;
+  line-height: 20px;
+}
+
+.left {
+  right: auto;
+  left: 0;
+}
+
+.right {
+  right: 0;
+  left: auto;
+}
+
+.scroller {
+  display: flex;
+  flex-direction: column;
+}

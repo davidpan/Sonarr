@@ -1,0 +1,33 @@
+.inputContainer {
+  margin-right: 20px;
+  min-width: 150px;
+}
+
+.label {
+  margin-bottom: 3px;
+  font-weight: bold;
+}
+
+.buttonContainer {
+  flex-grow: 1;
+}
+
+.buttons {
+  display: flex;
+  flex-grow: 1;
+}
+
+.saveSelectedButton,
+.organizeSelectedButton {
+  composes: button from 'Components/Link/SpinnerButton.css';
+
+  margin-right: 10px;
+  height: 35px;
+}
+
+.deleteSelectedButton {
+  composes: button from 'Components/Link/SpinnerButton.css';
+
+  margin-left: auto;
+  height: 35px;
+}
