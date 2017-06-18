@@ -39,6 +39,7 @@ class QualityProfiles extends Component {
 
   render() {
     const {
+      advancedSettings,
       items,
       isDeleting,
       onConfirmDeleteQualityProfile,
@@ -59,6 +60,7 @@ class QualityProfiles extends Component {
                 return (
                   <QualityProfile
                     key={item.id}
+                    advancedSettings={advancedSettings}
                     {...item}
                     isDeleting={isDeleting}
                     onConfirmDeleteQualityProfile={onConfirmDeleteQualityProfile}

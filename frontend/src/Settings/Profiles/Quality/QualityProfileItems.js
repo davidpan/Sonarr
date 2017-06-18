@@ -24,11 +24,12 @@ class QualityProfileItems extends Component {
 
     const isDragging = dropIndex !== null;
     const isDraggingUp = isDragging && dropIndex > dragIndex;
-    const isDraggingDown = isDragging && dropIndex < dragIndex;
+    const isDraggingDown = isDragging && dropIndex <= dragIndex;
 
     return (
       <FormGroup>
         <FormLabel>Qualities</FormLabel>
+
         <div>
           <FormInputHelpText
             text="Qualities higher in the list are more preferred. Only checked qualities are wanted"
@@ -62,14 +63,19 @@ class QualityProfileItems extends Component {
 
           <div className={styles.qualities}>
             {
-              qualityProfileItems.map(({ allowed, quality }, index) => {
+              qualityProfileItems.map(({ id, name, allowed, quality, items }, index) => {
+                const identifier = quality ? quality.id : id;
+
                 return (
                   <QualityProfileItemDragSource
-                    key={quality.id}
-                    qualityId={quality.id}
-                    name={quality.name}
+                    key={identifier}
+                    groupId={id}
+                    qualityId={quality && quality.id}
+                    name={quality ? quality.name : name}
                     allowed={allowed}
+                    items={items}
                     sortIndex={index}
+                    isInGroup={false}
                     isDragging={isDragging}
                     isDraggingUp={isDraggingUp}
                     isDraggingDown={isDraggingDown}

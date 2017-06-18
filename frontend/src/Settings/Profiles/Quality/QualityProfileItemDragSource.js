@@ -5,15 +5,18 @@ import { DragSource, DropTarget } from 'react-dnd';
 import classNames from 'classnames';
 import { QUALITY_PROFILE_ITEM } from 'Helpers/dragTypes';
 import QualityProfileItem from './QualityProfileItem';
+import QualityProfileItemGroup from './QualityProfileItemGroup';
 import styles from './QualityProfileItemDragSource.css';
 
 const qualityProfileItemDragSource = {
-  beginDrag({ qualityId, name, allowed, sortIndex }) {
+  beginDrag({ groupId, qualityId, sortIndex, groupIndex, name, allowed }) {
     return {
+      groupId,
       qualityId,
+      sortIndex,
+      groupIndex,
       name,
-      allowed,
-      sortIndex
+      allowed
     };
   },
 
@@ -24,13 +27,26 @@ const qualityProfileItemDragSource = {
 
 const qualityProfileItemDropTarget = {
   hover(props, monitor, component) {
-    const dragIndex = monitor.getItem().sortIndex;
+    const {
+      groupId: dragGroupId,
+      qualityId: dragQualityId,
+      sortIndex: dragIndex,
+      groupIndex: dragGroupIndex
+    } = monitor.getItem();
+
     const hoverIndex = props.sortIndex;
+    const hoverGroupIndex = props.groupIndex;
+    const hoverGroupId = props.isInGroup ? props.groupId : null;
 
     const hoverBoundingRect = findDOMNode(component).getBoundingClientRect();
     const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
     const clientOffset = monitor.getClientOffset();
     const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+    // If we're hovering over a child don't trigger on the parent
+    if (!monitor.isOver({ shallow: true })) {
+      return;
+    }
 
     // Moving up, only trigger if drag position is above 50%
     if (dragIndex < hoverIndex && hoverClientY > hoverMiddleY) {
@@ -42,7 +58,15 @@ const qualityProfileItemDropTarget = {
       return;
     }
 
-    props.onQualityProfileItemDragMove(dragIndex, hoverIndex);
+    props.onQualityProfileItemDragMove({
+      dragIndex,
+      dragGroupId,
+      dragQualityId,
+      dragGroupIndex,
+      dropIndex: hoverIndex,
+      dropGroupIndex: hoverGroupIndex,
+      dropGroupId: hoverGroupId
+    });
   }
 };
 
@@ -56,7 +80,8 @@ function collectDragSource(connect, monitor) {
 function collectDropTarget(connect, monitor) {
   return {
     connectDropTarget: connect.dropTarget(),
-    isOver: monitor.isOver()
+    isOver: monitor.isOver(),
+    isOverCurrent: monitor.isOver({ shallow: true })
   };
 }
 
@@ -67,25 +92,29 @@ class QualityProfileItemDragSource extends Component {
 
   render() {
     const {
+      groupId,
       qualityId,
       name,
       allowed,
+      items,
       sortIndex,
       isDragging,
       isDraggingUp,
       isDraggingDown,
-      isOver,
+      isOverCurrent,
       connectDragSource,
       connectDropTarget,
-      onQualityProfileItemAllowedChange
+      onCreateGroupPress,
+      onDeleteGroupPress,
+      onQualityProfileItemAllowedChange,
+      onItemGroupAllowedChange,
+      onItemGroupNameChange,
+      onQualityProfileItemDragMove,
+      onQualityProfileItemDragEnd
     } = this.props;
 
-    const isBefore = !isDragging && isDraggingUp && isOver;
-    const isAfter = !isDragging && isDraggingDown && isOver;
-
-    // if (isDragging && !isOver) {
-    //   return null;
-    // }
+    const isBefore = !isDragging && isDraggingUp && isOverCurrent;
+    const isAfter = !isDragging && isDraggingDown && isOverCurrent;
 
     return connectDropTarget(
       <div
@@ -105,16 +134,41 @@ class QualityProfileItemDragSource extends Component {
             />
         }
 
-        <QualityProfileItem
-          qualityId={qualityId}
-          name={name}
-          allowed={allowed}
-          sortIndex={sortIndex}
-          isDragging={isDragging}
-          isOver={isOver}
-          connectDragSource={connectDragSource}
-          onQualityProfileItemAllowedChange={onQualityProfileItemAllowedChange}
-        />
+        {
+          !!groupId && qualityId == null &&
+            <QualityProfileItemGroup
+              groupId={groupId}
+              name={name}
+              allowed={allowed}
+              items={items}
+              sortIndex={sortIndex}
+              isDragging={isDragging}
+              isDraggingUp={isDraggingUp}
+              isDraggingDown={isDraggingDown}
+              connectDragSource={connectDragSource}
+              onDeleteGroupPress={onDeleteGroupPress}
+              onQualityProfileItemAllowedChange={onQualityProfileItemAllowedChange}
+              onItemGroupAllowedChange={onItemGroupAllowedChange}
+              onItemGroupNameChange={onItemGroupNameChange}
+              onQualityProfileItemDragMove={onQualityProfileItemDragMove}
+              onQualityProfileItemDragEnd={onQualityProfileItemDragEnd}
+            />
+        }
+
+        {
+          qualityId != null &&
+            <QualityProfileItem
+              groupId={groupId}
+              qualityId={qualityId}
+              name={name}
+              allowed={allowed}
+              sortIndex={sortIndex}
+              isDragging={isDragging}
+              connectDragSource={connectDragSource}
+              onCreateGroupPress={onCreateGroupPress}
+              onQualityProfileItemAllowedChange={onQualityProfileItemAllowedChange}
+            />
+        }
 
         {
           isAfter &&
@@ -131,17 +185,24 @@ class QualityProfileItemDragSource extends Component {
 }
 
 QualityProfileItemDragSource.propTypes = {
-  qualityId: PropTypes.number.isRequired,
+  groupId: PropTypes.number,
+  qualityId: PropTypes.number,
   name: PropTypes.string.isRequired,
   allowed: PropTypes.bool.isRequired,
+  items: PropTypes.arrayOf(PropTypes.object),
   sortIndex: PropTypes.number.isRequired,
   isDragging: PropTypes.bool,
   isDraggingUp: PropTypes.bool,
   isDraggingDown: PropTypes.bool,
-  isOver: PropTypes.bool,
+  isOverCurrent: PropTypes.bool,
+  isInGroup: PropTypes.bool,
   connectDragSource: PropTypes.func,
   connectDropTarget: PropTypes.func,
+  onCreateGroupPress: PropTypes.func,
+  onDeleteGroupPress: PropTypes.func,
   onQualityProfileItemAllowedChange: PropTypes.func.isRequired,
+  onItemGroupAllowedChange: PropTypes.func,
+  onItemGroupNameChange: PropTypes.func,
   onQualityProfileItemDragMove: PropTypes.func.isRequired,
   onQualityProfileItemDragEnd: PropTypes.func.isRequired
 };

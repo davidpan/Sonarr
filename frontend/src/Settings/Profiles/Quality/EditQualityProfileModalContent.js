@@ -79,7 +79,6 @@ function EditQualityProfileModalContent(props) {
                   type={inputTypes.SELECT}
                   name="cutoff"
                   {...cutoff}
-                  value={cutoff ? cutoff.value.id : 0}
                   values={qualities}
                   helpText="Once this quality is reached Sonarr will no longer download episodes"
                   onChange={onCutoffChange}
@@ -96,6 +95,7 @@ function EditQualityProfileModalContent(props) {
             </Form>
         }
       </ModalBody>
+
       <ModalFooter>
         {
           id &&

@@ -52,6 +52,7 @@ class QualityProfile extends Component {
 
   render() {
     const {
+      advancedSettings,
       id,
       name,
       cutoff,
@@ -75,15 +76,43 @@ class QualityProfile extends Component {
                 return null;
               }
 
-              const isCutoff = item.quality.id === cutoff.id;
+              if (item.quality) {
+                const isCutoff = item.quality.id === cutoff;
+
+                return (
+                  <Label
+                    key={item.quality.id}
+                    kind={isCutoff ? kinds.INFO : kinds.default}
+                    title={isCutoff ? 'Cutoff' : null}
+                  >
+                    {item.quality.name}
+                  </Label>
+                );
+              }
+
+              const isCutoff = item.id === cutoff;
+
+              if (advancedSettings) {
+                return item.items.map((groupItem) => {
+                  return (
+                    <Label
+                      key={groupItem.quality.id}
+                      kind={isCutoff ? kinds.INFO : kinds.default}
+                      title={isCutoff ? 'Cutoff' : null}
+                    >
+                      {groupItem.quality.name}
+                    </Label>
+                  );
+                });
+              }
 
               return (
                 <Label
-                  key={item.quality.id}
+                  key={item.id}
                   kind={isCutoff ? kinds.INFO : kinds.default}
                   title={isCutoff ? 'Cutoff' : null}
                 >
-                  {item.quality.name}
+                  {item.name}
                 </Label>
               );
             })
@@ -113,9 +142,10 @@ class QualityProfile extends Component {
 }
 
 QualityProfile.propTypes = {
+  advancedSettings: PropTypes.bool.isRequired,
   id: PropTypes.number.isRequired,
   name: PropTypes.string.isRequired,
-  cutoff: PropTypes.object.isRequired,
+  cutoff: PropTypes.number.isRequired,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   isDeleting: PropTypes.bool.isRequired,
   onConfirmDeleteQualityProfile: PropTypes.func.isRequired
