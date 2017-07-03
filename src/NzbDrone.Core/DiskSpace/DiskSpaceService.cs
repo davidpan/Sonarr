@@ -34,7 +34,6 @@ namespace NzbDrone.Core.DiskSpace
         {
             var diskSpace = new List<DiskSpace>();
             diskSpace.AddRange(GetSeriesFreeSpace());
-            diskSpace.AddRange(GetDroneFactoryFreeSpace());
             diskSpace.AddRange(GetFixedDisksFreeSpace());
 
             return diskSpace.DistinctBy(d => d.Path).ToList();
@@ -48,16 +47,6 @@ namespace NzbDrone.Core.DiskSpace
                 .Distinct();
 
             return GetDiskSpace(seriesRootPaths);
-        }
-
-        private IEnumerable<DiskSpace> GetDroneFactoryFreeSpace()
-        {
-            if (_configService.DownloadedEpisodesFolder.IsNotNullOrWhiteSpace() && _diskProvider.FolderExists(_configService.DownloadedEpisodesFolder))
-            {
-                return GetDiskSpace(new[] { _diskProvider.GetPathRoot(_configService.DownloadedEpisodesFolder) });
-            }
-
-            return new List<DiskSpace>();
         }
 
         private IEnumerable<DiskSpace> GetFixedDisksFreeSpace()

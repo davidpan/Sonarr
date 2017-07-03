@@ -101,34 +101,5 @@ namespace NzbDrone.Core.Test.DiskSpace
             Mocker.GetMock<IDiskProvider>()
                   .Verify(v => v.GetAvailableSpace(It.IsAny<string>()), Times.Never());
         }
-
-        [Test]
-        public void should_check_diskspace_for_dronefactory_folder()
-        {
-            Mocker.GetMock<IConfigService>()
-                  .SetupGet(v => v.DownloadedEpisodesFolder)
-                  .Returns(_droneFactoryFolder);
-
-            GivenExistingFolder(_droneFactoryFolder);
-
-            var freeSpace = Subject.GetFreeSpace();
-
-            freeSpace.Should().NotBeEmpty();
-        }
-
-        [Test]
-        public void should_not_check_diskspace_for_missing_dronefactory_folder()
-        {
-            Mocker.GetMock<IConfigService>()
-                  .SetupGet(v => v.DownloadedEpisodesFolder)
-                  .Returns(_droneFactoryFolder);
-
-            var freeSpace = Subject.GetFreeSpace();
-
-            freeSpace.Should().BeEmpty();
-
-            Mocker.GetMock<IDiskProvider>()
-                  .Verify(v => v.GetAvailableSpace(It.IsAny<string>()), Times.Never());
-        }
     }
 }
